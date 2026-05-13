@@ -1,0 +1,8 @@
+{
+  "name": "telecom-analyst",
+  "version": "0.1.0",
+  "description": "Telecom analyst skills and slash commands: operator/vendor filing review, AI-strategy extraction, KPI tracking, peer analysis",
+  "author": {
+    "name": "ANTA / TelecomTV"
+  }
+}

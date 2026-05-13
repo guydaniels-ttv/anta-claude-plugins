@@ -1,48 +1,20 @@
 {
+  "_comment": "ANTA / TelecomTV connector stubs. None wired yet — replace placeholder URLs with your stood-up MCP servers. Remove this _comment key before going live.",
   "mcpServers": {
-    "daloopa": {
+    "anta-supabase": {
+      "_comment": "MCP server in front of the ANTA Supabase: operators, vendors, telco universe, cycle_snapshots. The agent should check what's already known before re-reading a filing.",
       "type": "http",
-      "url": "https://mcp.daloopa.com/server/mcp"
+      "url": "https://REPLACE-WITH-ANTA-SUPABASE-MCP/mcp"
     },
-    "morningstar": {
+    "filings-store": {
+      "_comment": "MCP server over the filings folder (PDFs of annual reports, 10-Ks/20-Fs, quarterlies, earnings call transcripts). Could be a local FS MCP server or Egnyte/Drive.",
       "type": "http",
-      "url": "https://mcp.morningstar.com/mcp"
+      "url": "https://REPLACE-WITH-FILINGS-STORE-MCP/mcp"
     },
-    "sp-global": {
+    "telecomtv-archive": {
+      "_comment": "Optional: TelecomTV editorial archive, so the agent can cite prior coverage alongside primary filings.",
       "type": "http",
-      "url": "https://kfinance.kensho.com/integrations/mcp"
-    },
-    "factset": {
-      "type": "http",
-      "url": "https://mcp.factset.com/mcp"
-    },
-    "moodys": {
-      "type": "http",
-      "url": "https://api.moodys.com/genai-ready-data/m1/mcp"
-    },
-    "mtnewswire": {
-      "type": "http",
-      "url": "https://vast-mcp.blueskyapi.com/mtnewswires"
-    },
-    "aiera": {
-      "type": "http",
-      "url": "https://mcp-pub.aiera.com"
-    },
-    "lseg": {
-      "type": "http",
-      "url": "https://api.analytics.lseg.com/lfa/mcp"
-    },
-    "pitchbook": {
-      "type": "http",
-      "url": "https://premium.mcp.pitchbook.com/mcp"
-    },
-    "chronograph": {
-      "type": "http",
-      "url": "https://ai.chronograph.pe/mcp"
-    },
-    "egnyte": {
-      "type": "http",
-      "url": "https://mcp-server.egnyte.com/mcp"
+      "url": "https://REPLACE-WITH-TELECOMTV-ARCHIVE-MCP/mcp"
     }
   }
 }

@@ -1,0 +1,27 @@
+# Filing Reviewer — managed-agent cookbook
+
+name: filing-reviewer
+model: claude-opus-4-7
+
+system:
+  file: ../../plugins/agent-plugins/filing-reviewer/agents/filing-reviewer.md
+  append: "You are running headless. Produce files in ./out/; do not assume an open Office document."
+
+tools:
+  - type: agent_toolset_20260401
+    default_config: { enabled: false }
+    configs:
+      - { name: read,  enabled: true }
+      - { name: grep,  enabled: true }
+      - { name: glob,  enabled: true }
+  # TODO: wire ANTA Supabase MCP and filings-store MCP here once stood up.
+
+mcp_servers: []
+
+skills:
+  - { from_plugin: ../../plugins/agent-plugins/filing-reviewer }
+
+callable_agents:
+  - { manifest: ./subagents/transcript-reader.yaml }
+  - { manifest: ./subagents/model-updater.yaml }
+  - { manifest: ./subagents/note-writer.yaml }   # only leaf with Write

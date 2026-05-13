@@ -1,0 +1,8 @@
+{
+  "name": "filing-reviewer",
+  "version": "0.1.0",
+  "description": "Operator and vendor filings + earnings calls to model update and analyst note draft",
+  "author": {
+    "name": "ANTA / TelecomTV"
+  }
+}
