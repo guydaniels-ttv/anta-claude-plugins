@@ -133,6 +133,8 @@ Default to `rules-then-curated`. Only use `rules-only` if the user explicitly re
 4. Determine `scoring_cycle_id`: use the user-specified value, or default to the most recent completed cycle in `scoring_cycles`.
 5. If a `trigger_source_doc_id` was passed (peer set being built in service of a specific filing), capture it for the envelope.
 
+**Filer-id strictness.** The DB enforces `peer_set_runs_subject_consistency CHECK` (and the same for `peer_set_memberships_peer_consistency`): operator filers MUST carry the `*_operator_id` FK; vendor filers MUST NOT. If the subject (or any peer in the candidate pool) cannot be resolved to a row in the `operators` table, that is a workflow signal — surface it ("X not found in operators; add to ANTA universe before re-running") and stop. Do not emit `null` for an operator filer as a workaround; the loader will fail.
+
 ### Step 2: Pull subject and candidate-pool data
 
 1. Pull the subject filer's values on every requested dimension from `anta-supabase`.
@@ -189,7 +191,7 @@ This is editorially valuable — it pre-empts the "but what about X?" question.
   "peer_set_run": {
     "subject_filer_kind": "operator | vendor",
     "subject_filer_name": "string — canonical name from ANTA universe",
-    "subject_filer_operator_id": "uuid or null",
+    "subject_filer_operator_id": "uuid required when subject_filer_kind=='operator'; null required when 'vendor'",
     "scoring_cycle_id": "uuid or null",
     "trigger_source_doc_id": "uuid or null",
     "dimensions_requested": ["scale | geo | business-mix | ai-archetype | ai-deployment-stage | capex-intensity | shareholder-mix", ...],
@@ -202,7 +204,7 @@ This is editorially valuable — it pre-empts the "but what about X?" question.
       "rank": "integer (1 = closest)",
       "peer_filer_kind": "operator | vendor",
       "peer_filer_name": "string — canonical from ANTA universe",
-      "peer_filer_operator_id": "uuid or null",
+      "peer_filer_operator_id": "uuid required when peer_filer_kind=='operator'; null required when 'vendor'",
       "similarity_overall": "number 0..1",
       "similarity_by_dimension": {
         "<dimension name>": "number 0..1"

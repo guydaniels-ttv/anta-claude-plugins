@@ -26,7 +26,7 @@ When you author a new extraction skill that doesn't fit either pattern, prefer a
   "source_doc": {
     "filer_kind": "operator | vendor",
     "filer_name": "string — canonical name from the ANTA universe",
-    "filer_operator_id": "uuid or null — populated when filer_kind=='operator' AND a match exists in operators table",
+    "filer_operator_id": "uuid — required when filer_kind=='operator'; null required when filer_kind=='vendor'",
     "doc_type": "annual_report | 10-K | 20-F | quarterly_report | earnings_call_transcript | investor_day | press_release | investor_deck | analyst_day | cmd | regulatory_filing | other",
     "title": "string — human-readable doc title, e.g. 'VEON Q3 2026 earnings call transcript'",
     "source_url": "string or null",
@@ -49,7 +49,9 @@ Some skills add additional top-level keys alongside `source_doc` and the rows ar
 
 **`filer_name`** — always populated, always canonical. For operator filers, this is the canonical name from the `operators` table. For vendor filers, use a clean canonical form (no marketing suffix, no parent-co disambiguators) — this is what the future `filer_vendor_id` FK will be backfilled from.
 
-**`filer_operator_id`** — populated only when `filer_kind == 'operator'` AND the lookup against `anta-supabase` returned a match. Otherwise `null`. The DB has a CHECK that rejects rows where this is set for vendor filers.
+**`filer_operator_id`** — **required** when `filer_kind == 'operator'`. **Must be `null`** when `filer_kind == 'vendor'`. The DB enforces this with `source_docs_filer_consistency CHECK`: the loader will fail (and the row will not land) if an operator filer carries `null` here, or a vendor filer carries a value.
+
+If the skill cannot resolve the filer in the `operators` table, that is a workflow signal — the operator should be added to the ANTA universe before extraction continues. Do not emit `null` for an operator filer as a workaround. Surface the missing-operator condition explicitly to the user (e.g. "VEON not found in operators; add to universe before re-running") and stop.
 
 **`doc_type`** — required for the UNIQUE constraint on `source_docs (filer_name, reporting_period, doc_type)`. Pick the most specific value; default to `'other'` only when no enum option fits.
 
