@@ -1,5 +1,8 @@
 [
-  { "event": "Process earnings: NVDA Q1-FY27", "description": "Single ticker, single period" },
-  { "event": "Process earnings: coverage-list semis, period Q1-FY27", "description": "Fan-out across a coverage list (orchestration layer iterates)" },
-  { "event": "Update model only: NVDA Q1-FY27, skip note", "description": "Follow-up when the analyst writes the note themselves" }
+  { "event": "Process filing: VEON Q3 2026 earnings call transcript", "description": "Single (filer, reporting_period). Agent runs all 5 extractions + earnings-analysis synthesis, stages 1 markdown + 5 JSON envelopes under ./out/." },
+  { "event": "Process filing: Vodafone FY 2026 annual report", "description": "Non-transcript filing — agent skips earnings-call-themes (transcripts only) and stages 1 markdown + 4 JSON envelopes." },
+  { "event": "Process filing: Ericsson Q4 2026 earnings call transcript (vendor filer)", "description": "Vendor filer. filer_kind='vendor', filer_operator_id stays null (DB CHECK requires null for vendor filers)." },
+  { "event": "Process filing: coverage-list tier-1 EMEA operators, period Q3 2026", "description": "Fan-out across the ANTA coverage universe. Orchestration layer iterates one session per (operator, reporting_period)." },
+  { "event": "Process filing: VEON Q3 2026 earnings call transcript [scoring_cycle_id=<uuid>]", "description": "When the run is bound to an ANTA scoring cycle, pass scoring_cycle_id through the request context so all envelopes carry it." },
+  { "event": "Re-process filing: VEON Q3 2026 earnings call transcript", "description": "Idempotent re-run. UPSERTs source_docs by (filer_name, reporting_period, doc_type) and replaces prior child rows. Useful when a transcript correction lands or extraction logic improves." }
 ]
