@@ -1,140 +1,73 @@
 ---
-description: Analyze quarterly earnings and create an earnings update report
-argument-hint: "[company name or ticker] [quarter, e.g. Q3 2024]"
+description: Produce a post-call editorial analysis for an operator or vendor's just-reported quarter — synthesises the structured extractions into a commissioning-ready editorial write-up
+argument-hint: "[filer name] [reporting period e.g. Q3 2026] [transcript path or URL, optional if already ingested]"
 ---
 
 # Earnings Analysis Command
 
-Create a professional equity research earnings update report analyzing quarterly results.
+Produce the post-call editorial layer on top of the structured extractions. Resolves prior-cycle threads, lands the editorial top story, surfaces commissioning-ready angles.
 
 ## Workflow
 
-### Step 1: Gather Information
+### Step 1: Parse the inputs
 
-Parse the input for:
-- Company name or ticker
-- Quarter (e.g., Q3 2024, Q2 FY25)
+- **Filer name** — operator or vendor. Required. Cross-check against ANTA universe.
+- **Reporting period** — required. E.g. "Q3 2026", "FY 2025".
+- **Source documents** — required if the filing isn't already ingested. Transcript URL/path + optional earnings-release / investor-deck.
+- **Audience hint** — optional; default `analyst-editorial`.
 
-If not provided, ask:
-- "What company's earnings would you like to analyze?"
-- "Which quarter? (e.g., Q3 2024)"
+If the filer is missing, ask:
+- "Which filer has just reported?"
 
-### Step 2: Verify Timeliness
+If the source isn't ingested AND no source documents were provided, ask for the transcript URL/path.
 
-**CRITICAL**: Before proceeding, verify you have the latest data:
-1. Search for "[Company] latest earnings results [current year]"
-2. Verify the earnings release is within the last 3 months
-3. Confirm transcript date matches release date
+### Step 2: Verify and load
 
-If data is stale, inform the user and search for the latest.
+1. Look up the filer in `anta-supabase` — canonical name + `filer_operator_id`.
+2. Check if a `source_docs` row already exists for this filer + reporting_period + earnings_call_transcript. If yes, pull all child extractions.
+3. If no existing extractions, fetch the source via `filings-store` MCP and prepare to run all four extraction skills.
+4. Pull the most recent `/earnings-preview` output for this filer (if any) to get `prior_cycle_threads`.
 
-### Step 3: Load Earnings Analysis Skill
+### Step 3: Run extractions if needed
 
-Use `skill: "earnings-analysis"` to create the report:
+If extractions don't exist in Supabase yet:
+- Run `ai-mentions-extractor` → ingest
+- Run `vendor-mentions` → ingest
+- Run `ai-capex-tracker` → ingest
+- Run `earnings-call-themes` → ingest
 
-1. **Data Collection** (search for latest):
-   - Earnings release (press release)
-   - 10-Q filing from SEC EDGAR
-   - Earnings call transcript
-   - Investor presentation/supplemental materials
-   - Consensus estimates (Bloomberg/FactSet)
+All four should land against the same `source_docs` row (loader UPSERTs by `(filer_name, reporting_period, doc_type)`).
 
-2. **Beat/Miss Analysis**:
-   - Revenue vs consensus: Beat/Miss by $X or X%
-   - EPS vs consensus: Beat/Miss by $X or X%
-   - Key segment performance vs expectations
-   - Explain WHY results differed
+### Step 4: Invoke the skill
 
-3. **Key Metrics Analysis**:
-   - Revenue breakdown by segment/geography
-   - Margin trends (gross, operating, net)
-   - Guidance: raised/maintained/lowered
-   - Updated forward estimates
+Use `skill: "earnings-analysis"` to do the synthesis layer on top of the extracted evidence base.
 
-4. **Generate Charts** (8-12):
-   - Quarterly revenue progression
-   - Quarterly EPS progression
-   - Margin trends
-   - Revenue by segment
-   - Beat/miss summary
-   - Estimate revisions
-   - Valuation charts
-
-5. **Create Report** (8-12 pages):
-   - Page 1: Summary with rating and price target
-   - Pages 2-3: Detailed results analysis
-   - Pages 4-5: Key metrics & guidance
-   - Pages 6-7: Updated investment thesis
-   - Pages 8-10: Valuation & estimates
-   - Sources section with clickable hyperlinks
-
-### Step 4: Deliver Output
+### Step 5: Deliver output
 
 Provide:
-1. **DOCX report** - 8-12 page earnings update
-2. **Summary** highlighting:
-   - Beat/miss on key metrics
-   - Guidance changes
-   - Thesis impact (positive/negative/neutral)
 
-## Report Structure Reference
+1. **Markdown editorial write-up** — fixed structure: top story / headlines from the print / prior-cycle threads (resolved / extended / abandoned / unaddressed) / editorial themes / AI deployment + capex / vendor ecosystem moves / notable absences / commissioning-ready angles / connection to ANTA scoring.
+2. **JSON sidecar** with the synthesised state — `source_doc` envelope + `synthesis` block — for downstream consumption by `editorial-leads`, `operator-trajectory-tracker`, etc.
 
-```
-PAGE 1: EARNINGS SUMMARY
-┌─────────────────────────────────────────────────────────────────┐
-│ [Company] Q3 2024 Earnings Update                               │
-│ Rating: BUY | Price Target: $XXX (from $XXX)                    │
-├─────────────────────────────────────────────────────────────────┤
-│ KEY TAKEAWAYS                                                   │
-│ • Revenue beat by X% on strong [segment] performance            │
-│ • EPS beat by $X.XX driven by margin expansion                  │
-│ • FY guidance raised to $X.XX-$X.XX (from $X.XX-$X.XX)         │
-│ • Thesis intact; maintain BUY rating                            │
-├─────────────────────────────────────────────────────────────────┤
-│ RESULTS SNAPSHOT                                                │
-│ ┌─────────────┬──────────┬──────────┬──────────┐               │
-│ │ Metric      │ Actual   │ Consensus│ Beat/Miss│               │
-│ │ Revenue     │ $X.XXB   │ $X.XXB   │ +X.X%    │               │
-│ │ EPS         │ $X.XX    │ $X.XX    │ +$X.XX   │               │
-│ │ Gross Margin│ XX.X%    │ XX.X%    │ +XXbps   │               │
-│ └─────────────┴──────────┴──────────┴──────────┘               │
-└─────────────────────────────────────────────────────────────────┘
+### Step 6: Offer next steps
 
-PAGES 2-3: DETAILED RESULTS
-- Segment-by-segment analysis
-- Geographic breakdown
-- Key drivers of beat/miss
-
-PAGES 4-5: METRICS & GUIDANCE
-- Margin analysis
-- Full-year guidance comparison
-- Updated quarterly estimates
-
-PAGES 6-7: THESIS UPDATE
-- What's changed
-- Risks and catalysts
-- Investment recommendation
-
-PAGES 8-10: VALUATION
-- Updated DCF/comps if material
-- Price target justification
-- Scenario analysis
-
-SOURCES SECTION (with clickable hyperlinks):
-- Earnings Release: [hyperlink]
-- Form 10-Q: [EDGAR hyperlink]
-- Earnings Call Transcript: [hyperlink]
-- Consensus estimates: Bloomberg as of [date]
-```
+After delivering, offer (one or more, named specifically per the commissioning-ready angles in the output):
+- "Want me to draft the full `/tv-angle` for [the strongest commissioning-ready angle]?"
+- "Want me to run `/filing-diff` against this filer's previous cycle for the cycle-over-cycle picture?"
+- "Want me to update `/peer-set` for this filer now that this cycle's data has landed?"
+- "Want me to update [filer]'s entry in `operator-trajectory-tracker` with the new cycle?"
 
 ## Quality Checklist
 
-Before delivery:
-- [ ] Earnings data is from latest quarter (not stale)
-- [ ] Beat/miss quantified with specific numbers
-- [ ] All charts embedded (8-12 total)
-- [ ] Sources section with clickable hyperlinks
-- [ ] Every figure/table has source citation
-- [ ] Guidance changes clearly documented
-- [ ] Rating and price target stated upfront
-- [ ] 8-12 pages, 3,000-5,000 words
+Before delivery, confirm:
+- [ ] Filer matched to ANTA canonical name; `filer_kind` correctly set; `filer_operator_id` populated for operator filers
+- [ ] All four extraction skills ran (or pulled from Supabase) before synthesis
+- [ ] Top story is specific, anchored to a verbatim quote or quantified disclosure
+- [ ] Every "Headlines" bullet has a source-anchored verbatim or numeric reference
+- [ ] Every prior-cycle thread has a status with supporting evidence quote
+- [ ] Disclosure-status distinction (spent / committed / announced / aspirational) preserved
+- [ ] Vendor ecosystem section explicit on changes vs. prior cycle
+- [ ] Notable absences are specific, not generic
+- [ ] Each commissioning-ready angle names a specific filer + framing + suggested next skill
+- [ ] Length 1,500–3,000 words
+- [ ] No equity-research artefacts (no DCF, no price target, no rating, no beat/miss vs consensus framing)

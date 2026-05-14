@@ -1,228 +1,217 @@
 ---
 name: earnings-analysis
-description: Create professional equity research earnings update reports (8-12 pages, 3,000-5,000 words) analyzing quarterly results for companies already under coverage. Fast-turnaround format focusing on beat/miss analysis, key metrics, updated estimates, and revised thesis. Includes 1-3 summary tables and 8-12 charts. Use when user requests "earnings update", "quarterly update", "earnings analysis", "Q1/Q2/Q3/Q4 results", or post-earnings report.
+description: Produce a post-call editorial analysis of an operator or vendor's just-reported quarterly results — synthesises the structured extractions from `ai-mentions-extractor`, `vendor-mentions`, `ai-capex-tracker`, and `earnings-call-themes` into a single editorial deliverable that resolves prior-cycle threads, lands the editorial top story, and surfaces commissioning-ready angles. Designed for TelecomTV editorial output, not equity-research valuation. Use when the user asks to analyse / write up / cover / report on / produce post-earnings analysis for an operator or vendor's just-reported quarter / FY / H1 results.
 ---
 
-# Equity Research Earnings Update
+# Earnings Analysis
 
-Create professional **EARNINGS UPDATE REPORTS** analyzing quarterly results for companies already under coverage, following institutional standards (JPMorgan, Goldman Sachs, Morgan Stanley format).
+Produce a post-call editorial write-up for a single operator or vendor's just-reported quarterly results. The output is the editorial layer that sits on top of the structured extractions: it resolves the prior-cycle threads from `earnings-preview`, lands the editorial top story, and hands TelecomTV editors a commissioning-ready set of angles.
 
-**Key Characteristics:**
-- **Length**: 8-12 pages
-- **Word Count**: 3,000-5,000 words
-- **Tables**: 1-3 summary tables (NOT comprehensive)
-- **Figures**: 8-12 charts
-- **Turnaround**: 1-2 days (within 24-48 hours of earnings)
-- **Audience**: Clients already familiar with the company
-- **Focus**: What's NEW - beat/miss, updated estimates, thesis impact
-- **Font**: Times New Roman throughout (unless user specifies otherwise)
+This skill is **editorial / synthesis**, not financial-research. It does **not** produce a DOCX report with price target, rating, DCF, or beat/miss tables for a stock. It does cite earnings numbers, AI capex disclosures, and headline KPIs — these are the evidence base for editorial claims about AI strategy, vendor ecosystem, and trajectory.
 
 ## When to Use
 
 Use when the user requests:
-- "Create an earnings update for [Company] Q3 2024"
-- "Analyze [Company]'s quarterly results"
-- "Post-earnings report for [Company]"
-- "Q1/Q2/Q3/Q4 update for [Company]"
+- "Analyse [operator]'s Q3 earnings"
+- "Write up [vendor]'s FY results"
+- "Post-earnings coverage for [filer]"
+- "[Filer] just reported — give me the editorial picture"
+- "Cover [filer]'s earnings call from this morning"
 
 **Do NOT use if:**
-- User requests "initiation report" → Use different skill
-- User requests "flash note" or "quick take" → Different format
-- Company is not already covered → Need initiation first
+- The call hasn't happened yet → use `earnings-preview`
+- The user wants extracted facts only (no editorial synthesis) → use the extraction skills directly (`ai-mentions-extractor`, `vendor-mentions`, `ai-capex-tracker`, `earnings-call-themes`)
+- The user wants a single tight angle → use `telecomtv-angle`
+- The user wants a multi-cycle trajectory view of one filer → use `operator-trajectory-tracker`
+- The user wants stock analysis / valuation / price target → this isn't the toolset
 
-## Critical Requirements
+## Inputs
 
-### 1. Speed & Timeliness
-- Publish within 24-48 hours of earnings release
-- Focus on NEW information only
-- Don't rehash company background extensively
+| Input | Required | Notes |
+|---|---|---|
+| Filer | Yes | Operator or vendor. Cross-check against the ANTA universe. |
+| Reporting period | Yes | E.g. "Q3 2026", "FY 2025". The period just reported. |
+| Source document(s) | Required for fresh extraction | Transcript URL/path + earnings-release URL/path + investor-deck (if available). If the doc(s) have already been ingested, the skill works from Supabase. |
+| Audience hint | Optional | Default `analyst-editorial`. Same vocabulary as `telecomtv-angle`. |
 
-### 2. Beat/Miss Analysis
-- Lead with whether company beat or missed estimates
-- Quantify variances (e.g., "Revenue beat by $120M or 3%")
-- Explain WHY results differed from expectations
+## Output
 
-### 3. Summary Format
-- Keep tables to 1-3 (summary only, not comprehensive)
-- No full P&L/Cash Flow/Balance Sheet (just key metrics)
-- Assume reader has seen initiation report
+A markdown editorial write-up (3–5 pages when rendered, ~1,500–3,000 words) plus a JSON sidecar capturing the synthesised state for downstream skills. The markdown is the deliverable; the JSON lets `telecomtv-angle`, `operator-trajectory-tracker`, and `editorial-leads` consume the synthesis.
 
-### 4. Citations & Source Attribution ⭐⭐⭐ MANDATORY
-
-**CRITICAL**: Properly cite all data with SPECIFIC sources and CLICKABLE HYPERLINKS.
-
-**Include specific citations WITH CLICKABLE LINKS in every figure and table:**
+### Markdown structure
 
 ```
-Source: Q3 2024 10-Q filed November 8, 2024; Company earnings release
-        [Hyperlink "10-Q" to: https://www.sec.gov/cgi-bin/viewer?accession=...]
-        [Hyperlink "earnings release" to: https://investor.company.com/news/q3-2024]
+# [Filer] [Reporting period] — Editorial Analysis
+
+## Top story
+[2–4 sentences. The single most editorially significant thing from this call. Specific, anchored to a verbatim quote or quantified disclosure.]
+
+## Headlines from the print
+[3–6 bullets. Reported numbers + AI capex + vendor moves. Each bullet anchored to a verbatim quote or table number with source ref.]
+
+## Prior-cycle threads — resolved / extended / abandoned
+[For each thread carried over from last cycle's `earnings-preview` `prior_cycle_threads`:
+- **[Thread title]** — RESOLVED / EXTENDED / ABANDONED / UNADDRESSED
+  - One sentence on what the call said.
+  - Verbatim quote (≤500 chars) if applicable.
+- ...]
+
+## Editorial themes
+[Pulled from `earnings-call-themes` for this transcript. List 3–6 themes with their tension flag. For tension=true themes, briefly characterise the tension.]
+
+## AI deployment + capex
+[Pulled from `ai-mentions-extractor` (deployment + contribution categories) + `ai-capex-tracker`. 1–3 paragraphs synthesising what the filer is actually doing on AI vs. what they previously committed to. Cite verbatim where impactful.]
+
+## Vendor ecosystem moves
+[Pulled from `vendor-mentions`. Notable new partnerships, expanded scope, vendors that have gone quiet. 1–2 paragraphs.]
+
+## Notable absences
+[Things the filer didn't mention that you'd have expected based on prior cycles, peer behaviour, or recent industry events. 2–4 bullets.]
+
+## Commissioning-ready angles
+[2–4 short bullets, each pointing at a specific TelecomTV piece an editor could commission today. Each cross-references back to the supporting evidence from above.]
+
+## Connection to ANTA scoring
+[1–2 sentences on what indicators this print provides evidence for, or how it might shift the filer's archetype / trajectory in the next ANTA cycle. Skip this section if the user explicitly says it's not relevant.]
 ```
 
-**HOW HYPERLINKS SHOULD APPEAR IN WORD:**
-- Document names appear as blue, underlined clickable links
-- Reader can Ctrl+Click to open source directly
-- Not plain text URLs - formatted hyperlinks with display text
+### JSON sidecar
 
-**REQUIRED SOURCES LIST:**
-
-Cite in every earnings update:
-- ✅ Earnings release (with date and URL)
-- ✅ 10-Q filing (with filing date and EDGAR link)
-- ✅ Earnings call transcript (with date)
-- ✅ Investor presentation/supplemental materials (if available)
-- ✅ Consensus estimates source (Bloomberg/FactSet/etc. with date)
-- ✅ Prior guidance (from previous quarter's materials)
-
-**REFERENCE SECTION WITH CLICKABLE HYPERLINKS:**
-
-Include "Sources" section at end of report:
-
+```json
+{
+  "source_doc": {
+    "filer_kind": "operator",
+    "filer_name": "VEON",
+    "filer_operator_id": "<uuid>",
+    "doc_type": "earnings_call_transcript",
+    "title": "VEON Q3 2026 earnings call transcript",
+    "source_url": "https://...",
+    "filing_date": "2026-10-30",
+    "reporting_period": "Q3 2026",
+    "scoring_cycle_id": null,
+    "reporting_currency": "USD",
+    "extracted_by": "earnings-analysis v1"
+  },
+  "synthesis": {
+    "top_story": "string — 2 to 4 sentences",
+    "thread_resolutions": [
+      {
+        "thread_title": "string",
+        "prior_cycle": "string e.g. 'Q2 2026'",
+        "status": "resolved | extended | abandoned | unaddressed",
+        "evidence_quote": "string ≤500 chars or null",
+        "notes": "one sentence"
+      }
+    ],
+    "commissioning_ready_angles": [
+      {
+        "angle_summary": "string — one sentence",
+        "supporting_evidence_refs": ["string", ...],
+        "suggested_skill_call": "telecomtv-angle | filing-diff | peer-set | none"
+      }
+    ],
+    "anta_scoring_impact": "string — 1 to 2 sentences, or null if explicitly out of scope"
+  }
+}
 ```
-SOURCES & REFERENCES
 
-Earnings Materials (Q3 2024):
-• Earnings Release (November 7, 2024)
-  [Hyperlink entire line to: https://investor.company.com/news/q3-2024-earnings]
+## Workflow
 
-• Form 10-Q (Filed November 8, 2024)
-  [Hyperlink to: https://www.sec.gov/cgi-bin/viewer?accession=...]
+### Step 1: Identify the filer + period
 
-• Earnings Call Transcript (November 7, 2024)
-  [Hyperlink to: https://seekingalpha.com/article/...]
+1. Confirm the filer; determine `filer_kind` and look up `filer_operator_id` from `anta-supabase`.
+2. Confirm the just-reported `reporting_period`.
+3. Determine `doc_type` (typically `'earnings_call_transcript'` but can be `'press_release'` if call hasn't happened yet, or `'investor_deck'` for material updates).
+4. Populate the `source_doc` envelope.
 
-• Investor Presentation (November 7, 2024)
-  [Hyperlink to: https://investor.company.com/presentations/q3-2024.pdf]
-```
+### Step 2: Ensure structured extractions exist
 
-**VERIFICATION CHECKLIST:**
-- [ ] Every figure has source with specific document and date
-- [ ] Every table has source with document reference
-- [ ] Beat/miss analysis cites consensus source with date
-- [ ] Guidance changes cite current and prior guidance sources
-- [ ] Key statistics have footnotes
-- [ ] Sources section lists all materials with URLs
-- [ ] ALL URLs are CLICKABLE HYPERLINKS (not plain text)
-- [ ] All SEC filings hyperlinked to EDGAR viewer
+Two paths:
 
-### 5. Updated Estimates
-- Update forward estimates based on results
-- Show old vs. new estimates clearly
-- Explain what changed and why
+**A. If the filing has already been ingested** (i.e. a `source_docs` row exists for the filer + reporting_period):
+- Pull all child rows: `ai_mentions`, `vendor_mentions`, `ai_capex`, `earnings_call_themes`
+- If any extraction is missing, run the corresponding skill now and ingest
 
-## High-Level Workflow
+**B. If the filing is fresh** (not yet in `anta-supabase`):
+- Run all four extraction skills against the source documents:
+  - `ai-mentions-extractor`
+  - `vendor-mentions`
+  - `ai-capex-tracker`
+  - `earnings-call-themes`
+- Each produces a `source_doc` envelope + child rows. Coordinate so all four point to the same `source_doc` record (loader UPSERTs by `(filer_name, reporting_period, doc_type)`).
 
-The earnings update process follows 5 phases:
+The structured extractions are the evidence base for everything that follows. Don't skip this step — synthesise from extractions, not from re-reading the doc.
 
-### Phase 1: Data Collection (30-60 minutes)
+### Step 3: Pull prior-cycle threads
 
-**🚨🚨🚨 CRITICAL: TRAINING DATA IS OUTDATED 🚨🚨🚨**
+Query `anta-supabase` for the most recent `earnings-preview` output for this filer (if any) — specifically the `prior_cycle_threads` array. Each thread had a `resolves_if` condition. For each:
+- Did the call meet the resolves_if condition? → status `resolved`
+- Did the call address the thread but not resolve it? → status `extended` (or `abandoned` if the filer walked back)
+- Did the call not address the thread at all? → status `unaddressed`
 
-**BEFORE STARTING - COMPLETE THESE 4 STEPS IN ORDER:**
-1. **CHECK TODAY'S DATE** - Write down the current date
-2. **SEARCH FOR LATEST** - Use web search: "[Company] latest earnings results"
-3. **VERIFY THE DATE** - Confirm earnings release is within last 3 months
-4. **CHECK TRANSCRIPT DATE** - Verify transcript date matches release date
+Capture verbatim quotes from the just-extracted `ai_mentions` / `ai_capex` / `earnings_call_themes` rows that anchor each status call.
 
-**COMMON MISTAKE**: Using outdated earnings calls from training data instead of searching for the latest.
+### Step 4: Identify the top story
 
-**REQUIREMENTS:**
-- ✅ Search for latest earnings - do NOT rely on training data
-- ✅ Write down today's date and the release date found
-- ✅ Verify release date is within 3 months of today
-- ✅ Verify transcript date matches release date
-- ✅ If dates don't match or are old (>3 months), search again
+Pick **one** top story. Criteria:
+- Anchored to a specific verbatim disclosure or quantified claim from this call
+- Editorially significant — would TelecomTV want to lead with this?
+- Specific — no generic "operator continues AI investment" framing
 
-**See [references/workflow.md](references/workflow.md)** for detailed search procedures and verification steps.
+If the call was genuinely uneventful, the top story might be a notable absence ("X failed to update on Y after pressing in Q3"). That's a valid lead.
 
-### Phase 2: Analysis (2-3 hours)
-- Beat/miss analysis for each key metric
-- Segment/geographic/product breakdown
-- Margin and guidance analysis
-- Update financial model and estimates
+### Step 5: Write the synthesis sections
 
-**See [references/workflow.md](references/workflow.md)** for detailed analysis framework.
+Write each section of the markdown structure. Rules:
 
-### Phase 3: Chart Generation (1-2 hours)
-Create 8-12 charts focusing on quarterly trends and what's new:
-- Quarterly revenue progression
-- Quarterly EPS progression
-- Quarterly margin trends
-- Revenue by segment/geography
-- Key operating metrics
-- Beat/miss summary
-- Estimate revisions
-- Valuation charts
+- **Headlines from the print** — anchor every bullet to a verbatim quote or numeric disclosure. Cite source location (page or timestamp).
+- **AI deployment + capex** — synthesise from `ai_mentions` (deployment + contribution categories) and `ai_capex` rows. Be honest about what's `spent` vs `committed` vs `aspirational`. Don't smooth over the disclosure-status distinction.
+- **Vendor ecosystem moves** — synthesise from `vendor_mentions`. Highlight changes vs. prior cycle (vendors newly named, vendors no longer mentioned, scope changes on existing partnerships).
+- **Notable absences** — pull from `earnings-call-themes` summary + cross-check against prior-cycle commitments. Be specific, not generic.
+- **Commissioning-ready angles** — 2–4 bullets, each pointing at a specific TelecomTV piece. Each must cross-reference supporting evidence from earlier sections. Suggest the next skill to call (`telecomtv-angle` for full angle drafting, `filing-diff` for cycle-over-cycle comparison, `peer-set` for peer context).
+- **Connection to ANTA scoring** — only include if the filer is in the ANTA universe AND the call has material implications for their archetype / trajectory / indicator scores. 1–2 sentences max.
 
-**See [references/workflow.md](references/workflow.md)** for chart specifications.
+### Step 6: Write the top story last
 
-### Phase 4: Report Creation (2-3 hours)
-Create 8-12 page DOCX report with specific structure.
+Counter-intuitively, write the "top story" section *after* drafting the rest — synthesis often surfaces the actual lead, which may differ from the most-pressed analyst topic on the call.
 
-**See [references/report-structure.md](references/report-structure.md)** for complete page-by-page templates and formatting requirements.
+### Step 7: Build the JSON sidecar
 
-**High-level structure:**
-- Page 1: Earnings summary with rating and price target
-- Pages 2-3: Detailed results analysis
-- Pages 4-5: Key metrics & guidance
-- Pages 6-7: Updated investment thesis
-- Pages 8-10: Valuation & estimates
-- Pages 11-12: Appendix (optional)
+Capture the synthesised state in the sidecar JSON for downstream consumption. The sidecar is what `editorial-leads` and `operator-trajectory-tracker` will pull from.
 
-### Phase 5: Quality Check & Delivery (30 minutes)
-Verify content, formatting, accuracy, and timeliness before delivery.
+## Quality checklist
 
-**See [references/best-practices.md](references/best-practices.md)** for quality checklist and common mistakes to avoid.
+Before delivery:
+- [ ] All four extraction skills run (or pulled from Supabase) before synthesis began
+- [ ] Top story is specific, anchored to a verbatim quote or quantified disclosure
+- [ ] Every "Headlines from the print" bullet has a source-anchored verbatim or numeric reference
+- [ ] Every prior-cycle thread has a status (resolved / extended / abandoned / unaddressed) with evidence quote
+- [ ] Disclosure status (spent / committed / announced / aspirational) preserved when discussing AI capex — not smoothed to "investing"
+- [ ] Vendor ecosystem section explicitly notes changes vs. prior cycle (additions / removals / scope changes)
+- [ ] Notable absences section is specific, not generic
+- [ ] Commissioning-ready angles each name a specific filer + specific framing + suggested next skill
+- [ ] Length: 1,500–3,000 words. Anything longer is wasted editorial time.
+- [ ] No equity-research artefacts (no DCF, no price target, no rating, no beat/miss vs consensus framing — though specific number disclosure vs. prior-cycle guide is fine and editorially valuable)
 
-## Output Specification
+## Important notes
 
-**Primary Deliverable**: DOCX report (8-12 pages)
-**File Name**: `[Company]_Q[Quarter]_[Year]_Earnings_Update.docx`
-**Example**: `Nike_Q2_FY24_Earnings_Update.docx`
-
-**Contents:**
-- Page 1: Summary with rating, price target, key takeaways
-- Pages 2-3: Detailed results analysis
-- Pages 4-5: Key metrics and guidance
-- Pages 6-7: Updated thesis assessment
-- Pages 8-10: Valuation and estimates
-- Pages 11-12: Appendix (optional)
-- 8-12 embedded charts
-- 1-3 summary tables
-- Complete sources section with clickable hyperlinks
-
-**Optional Deliverable**: XLS model update (optional for earnings updates)
-
-## Key Differences from Initiation Report
-
-| Aspect | Earnings Update | Initiation Report |
-|--------|----------------|-------------------|
-| **Length** | 8-12 pages | 30-50 pages |
-| **Words** | 3,000-5,000 | 10,000-15,000 |
-| **Tables** | 1-3 summary | 12-20 comprehensive |
-| **Figures** | 8-12 | 25-35 |
-| **Turnaround** | 1-2 days | 3-6 weeks |
-| **Scope** | Quarterly results | Complete company |
-| **Focus** | What's NEW | Everything |
-| **Company Background** | Brief mention | 6-10 pages |
-| **XLS Model** | Optional | Required |
+- This skill assumes the four extraction skills land first. If the user invokes `/earnings` against a fresh transcript that hasn't been extracted, run all four first and ingest into Supabase before synthesising.
+- The "Connection to ANTA scoring" section is the one place where the editorial layer touches the methodology layer. Be careful: the ANTA scoring conversation is a different one from editorial commissioning. Flag the connection but don't try to score.
+- If the filer is a vendor (not an operator), the "ANTA scoring" section is typically not applicable — the ANTA Index scores operators, not vendors. Skip it for vendor filers unless you have specific reason to include it.
+- For each commissioning-ready angle, suggest *one* downstream skill to call. Don't list 3 options — make a recommendation.
 
 ## Resources
 
-### references/workflow.md
-Detailed Phase 1-5 instructions with step-by-step procedures for data collection, analysis, chart generation, and report creation.
-
-### references/report-structure.md
-Complete page-by-page templates, table formats, and formatting requirements for the DOCX report.
-
-### references/best-practices.md
-Examples of good/bad headlines, tips for success, common mistakes to avoid, and comprehensive quality checklist.
+### ../../references/source-doc-envelope.md
+The shared `source_doc` envelope convention used across all telecom-analyst extraction skills.
 
 ## Dependencies
 
 **Required:**
-- Python (matplotlib, pandas, seaborn) for chart generation
-- DOCX skill for report creation
+- `anta-supabase` MCP — for prior-cycle data, prior `earnings-preview` outputs, and post-extraction synthesis
+- `ai-mentions-extractor`, `vendor-mentions`, `ai-capex-tracker`, `earnings-call-themes` skills — these provide the evidence base; run before synthesis if not already in Supabase
 
 **Optional:**
-- XLS skill for model updates (not required for earnings updates)
+- `filings-store` MCP — to fetch source documents if not already ingested
+- `telecomtv-archive` MCP — to flag which angles TelecomTV has already covered (avoid duplicate commissioning recommendations)
+- `peer-set` skill output — useful context if the analysis needs peer-comparison framing
