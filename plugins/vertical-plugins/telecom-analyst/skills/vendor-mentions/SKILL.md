@@ -30,20 +30,30 @@ Use when the user requests:
 |---|---|---|
 | Source document | Yes | Filing PDF/HTML, transcript, press release, or investor deck. Path or URL — fetch via `filings-store` if URL. |
 | Filer (operator or vendor) | If not derivable | The company whose filing this is. Cross-check against ANTA universe. |
-| Cycle | If not derivable | E.g. Q3 2026, FY 2025. |
-| Filer side | Derived | `operator` (the filer is buying — named third parties are suppliers/partners) or `vendor` (the filer is selling — named operators are customers). Determines default relationship-type mapping. |
+| Reporting period | If not derivable | E.g. Q3 2026, FY 2025. Goes into `source_doc.reporting_period`. |
+| Doc type | If not derivable | Goes into `source_doc.doc_type` — see envelope reference. Required for UPSERT. |
+| ANTA scoring cycle | Optional | If the run is tied to an ANTA scoring cycle, pass the `scoring_cycle_id` UUID. |
+| Filer side | Derived from `filer_kind` | `operator` (the filer is buying — named third parties are suppliers/partners) or `vendor` (the filer is selling — named operators are customers). Determines default relationship-type mapping. |
 
 ## Output
 
-**Primary deliverable**: JSON array of vendor-mention objects + a markdown summary table + a 3–5 sentence editorial narrative.
+**Primary deliverable**: a JSON object with the shared `source_doc` envelope + a `mentions` array + a `universe_candidates` array + a markdown summary table + a 3–5 sentence editorial narrative. The envelope shape is shared with every other extraction skill — see [../../references/source-doc-envelope.md](../../references/source-doc-envelope.md) for the full convention.
 
 ```json
 {
-  "filer": "VEON",
-  "filer_side": "operator",
-  "cycle": "Q3 2026",
-  "source_doc": "VEON Q3 2026 earnings call transcript",
-  "source_url": "https://...",
+  "source_doc": {
+    "filer_kind": "operator",
+    "filer_name": "VEON",
+    "filer_operator_id": "<uuid from operators table or null>",
+    "doc_type": "earnings_call_transcript",
+    "title": "VEON Q3 2026 earnings call transcript",
+    "source_url": "https://...",
+    "filing_date": "2026-10-30",
+    "reporting_period": "Q3 2026",
+    "scoring_cycle_id": null,
+    "reporting_currency": null,
+    "extracted_by": "vendor-mentions v1"
+  },
   "mentions": [
     {
       "id": 1,
@@ -65,15 +75,20 @@ Use when the user requests:
   ],
   "universe_candidates": [
     {
+      "mention_id": 7,
       "vendor_name_raw": "Algotive",
-      "context": "We have partnered with Algotive for our RAN energy-optimisation pilot in Bangladesh.",
-      "suggested_type": "AI infra",
+      "context_quote": "We have partnered with Algotive for our RAN energy-optimisation pilot in Bangladesh.",
+      "suggested_vendor_type": "AI infra / silicon",
       "suggested_domain": "RAN"
     }
   ],
   "summary": "Nine vendor mentions, dominated by AI-related hyperscaler and infra suppliers. Headline: Microsoft Azure OpenAI partnership scope expanded from one market to all. One name new to the ANTA universe (Algotive — RAN AI pilot)."
 }
 ```
+
+The `filer_side` denormalised column on each `vendor_mentions` DB row is set by the loader from the envelope's `filer_kind` — the skill does not need to emit it per-mention.
+
+`mention_id` on a `universe_candidates` entry is the `id` of the mention in this same output's `mentions` array that produced the candidate. The loader translates this to a `vendor_mention_id` FK at insert time. Set to `null` if the candidate isn't tied to a specific mention.
 
 ## Vendor Taxonomy
 
@@ -146,9 +161,10 @@ Also pass the **ANTA vendor universe** (from `anta-supabase`) as a seed list —
 
 ### Step 1: Identify and verify
 
-1. Confirm doc is the latest cycle (filing date verified).
-2. Identify the filer; determine `filer_side` (operator or vendor) by looking it up in the ANTA universe.
-3. Note the cycle.
+1. Confirm doc is the latest cycle (filing date captured).
+2. Identify the filer; determine `filer_kind` (operator or vendor) by looking it up in the ANTA universe. For operator filers, capture `filer_operator_id`.
+3. Determine `doc_type` from the 12-value enum (annual_report / 10-K / 20-F / quarterly_report / earnings_call_transcript / investor_day / press_release / investor_deck / analyst_day / cmd / regulatory_filing / other). Required for UPSERT.
+4. Capture `reporting_period` and `scoring_cycle_id` (if the run is bound to an ANTA cycle). Populate the full `source_doc` envelope before extracting mentions.
 
 ### Step 2: Locate vendor sections
 
@@ -188,11 +204,13 @@ For each match (universe-seeded or pattern-matched):
 ### Step 5: Universe candidates
 
 For each named entity **not** matched to the ANTA universe, add to `universe_candidates`:
-- The raw name as it appeared
-- The context quote that anchors it
-- Your suggested `vendor_type` and `domain` (informed guesses)
+- `mention_id` — the `id` of the mention in this output's `mentions` array that produced the candidate (or `null` if not tied to a specific mention)
+- `vendor_name_raw` — the raw name as it appeared
+- `context_quote` — the context quote that anchors it (≤500 chars)
+- `suggested_vendor_type` — one of the vendor_type enum values (informed guess)
+- `suggested_domain` — one of the domain enum values (informed guess)
 
-These flow downstream to a human reviewer who decides whether to add to the universe.
+The loader uses `mention_id` to populate the `vendor_mention_id` FK on `vendor_universe_candidates` so a reviewer can jump straight from candidate to its originating mention. Candidates flow downstream to a human reviewer who decides whether to promote into the (future) ANTA vendor universe.
 
 ### Step 6: Summary
 
@@ -205,11 +223,19 @@ Emit a 3–5 sentence narrative for an editor. Lead with the single most consequ
 
 ```json
 {
-  "filer": "string",
-  "filer_side": "operator | vendor",
-  "cycle": "string",
-  "source_doc": "string",
-  "source_url": "string or null",
+  "source_doc": {
+    "filer_kind": "operator | vendor",
+    "filer_name": "string — canonical name from ANTA universe",
+    "filer_operator_id": "uuid or null",
+    "doc_type": "annual_report | 10-K | 20-F | quarterly_report | earnings_call_transcript | investor_day | press_release | investor_deck | analyst_day | cmd | regulatory_filing | other",
+    "title": "string — human-readable doc title",
+    "source_url": "string or null",
+    "filing_date": "YYYY-MM-DD or null",
+    "reporting_period": "string e.g. 'Q3 2026'",
+    "scoring_cycle_id": "uuid or null",
+    "reporting_currency": null,
+    "extracted_by": "vendor-mentions v1"
+  },
   "mentions": [
     {
       "id": "integer",
@@ -231,9 +257,10 @@ Emit a 3–5 sentence narrative for an editor. Lead with the single most consequ
   ],
   "universe_candidates": [
     {
+      "mention_id": "integer or null — id of the originating mention in this output's mentions array",
       "vendor_name_raw": "string",
-      "context": "string — short quote anchoring the mention",
-      "suggested_type": "string — one of the vendor_type values",
+      "context_quote": "string ≤500 chars — quote anchoring the mention",
+      "suggested_vendor_type": "string — one of the vendor_type values",
       "suggested_domain": "string — one of the domain values"
     }
   ],
@@ -244,22 +271,27 @@ Emit a 3–5 sentence narrative for an editor. Lead with the single most consequ
 ## Quality Checklist
 
 Before delivery:
-- [ ] Source doc verified as latest cycle
-- [ ] Filer matched to ANTA canonical name; filer_side correctly identified
+- [ ] `source_doc` envelope is complete and valid (filer_kind set, filer_name canonical, doc_type set, reporting_period set)
+- [ ] `filer_operator_id` populated only when `filer_kind == 'operator'` AND a match exists; else null
+- [ ] Source doc verified as latest cycle (filing_date captured)
 - [ ] ANTA vendor universe pulled and used as seed list
 - [ ] Every named third party captured — including ones in lists, footnotes, and Q&A
 - [ ] `vendor_canonical` set from the universe where a match was found
 - [ ] `in_anta_universe` is correct for every row
 - [ ] Unmatched names appear in `universe_candidates`, not silently dropped
+- [ ] Each `universe_candidates` entry uses `context_quote` and `suggested_vendor_type` (not the older `context` / `suggested_type` field names)
 - [ ] `ai_related` flag set correctly (use the rule above, don't guess)
 - [ ] `materiality` is honestly assessed — not everything is `named-strategic`
-- [ ] `filer_side` drives sensible defaults for `relationship_type`
+- [ ] `filer_kind` drives sensible defaults for `relationship_type`
 - [ ] Output JSON validates against the schema
 
 ## Resources
 
 ### references/vendor-taxonomy.md
 Worked examples for the harder vendor-type and relationship-type calls — companies that span types (Samsung, Oracle, Huawei), and how to handle JVs / minority investments / reseller relationships.
+
+### ../../references/source-doc-envelope.md
+The shared `source_doc` envelope convention used across all telecom-analyst extraction skills.
 
 ## Dependencies
 

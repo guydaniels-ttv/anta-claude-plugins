@@ -1,6 +1,6 @@
 ---
 description: Extract AI-related capex and capex-adjacent disclosures from an operator or vendor filing or transcript — quantified spending claims with status, scope, and trajectory
-argument-hint: "[path or URL to source doc] [filer name, optional] [cycle, optional]"
+argument-hint: "[path or URL to source doc] [filer name, optional] [reporting period, optional]"
 ---
 
 # AI Capex Tracker Command
@@ -12,8 +12,11 @@ Scan a single primary-source document for every quantified AI-spending disclosur
 ### Step 1: Parse the inputs
 
 - **Source doc** — path or URL to a filing PDF/HTML, transcript, investor deck, or press release
-- **Filer name** — optional; infer from the doc if not given
-- **Cycle** — optional; infer from the doc if not given
+- **Filer name** — optional; infer from the doc if not given. Determines `filer_kind` (operator vs. vendor) and `filer_operator_id` via `anta-supabase` lookup.
+- **Reporting period** — optional; infer from the doc if not given (e.g. "Q3 2026"). Goes into `source_doc.reporting_period`.
+- **Doc type** — optional; infer from the doc if not given. Required for the loader UPSERT.
+- **Reporting currency** — optional; infer from the doc if not given. Required by `ai-capex-tracker` for amount normalisation.
+- **ANTA scoring cycle** — optional; pass `scoring_cycle_id` if the run is tied to an ANTA cycle.
 
 If the source doc is missing, ask:
 - "Which document should I scan? Paste a path or URL."
@@ -39,7 +42,7 @@ Provide three things:
    | # | Amount | Currency | Horizon | Status | Scope | Capex/Opex | % of total | Vendors | Confidence |
    |---|---|---|---|---|---|---|---|---|---|
 
-2. **JSON object** matching the schema in the skill's `SKILL.md`, ready for Supabase ingest.
+2. **JSON object** matching the schema in the skill's `SKILL.md` — `source_doc` envelope + `total_capex_disclosed` + `disclosures` array + `prior_cycle_comparison` + `summary` — ready for Supabase ingest.
 
 3. **3–6 sentence narrative** for a TelecomTV editor. Lead with the most newsworthy disclosure (usually the largest `spent` or `committed` figure, or a material revision). State explicitly if zero quantified disclosures were found — that is itself news.
 

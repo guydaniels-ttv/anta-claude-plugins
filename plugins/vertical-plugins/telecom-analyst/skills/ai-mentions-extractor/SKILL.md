@@ -30,31 +30,48 @@ Use when the user requests:
 |---|---|---|
 | Source document | Yes | Path to a filing PDF/HTML, transcript, press release, or investor deck. If the user gives a URL, fetch via `filings-store` MCP or web. |
 | Operator/vendor name | If not derivable from the doc | Cross-check against the ANTA universe in the `anta-supabase` MCP. |
-| Cycle (e.g. Q3 2026, FY 2025) | If not derivable from the doc | Used for the `cycle` field in the output. |
+| Reporting period (e.g. Q3 2026, FY 2025) | If not derivable from the doc | Goes into `source_doc.reporting_period`. |
+| Doc type | If not derivable from the doc | Goes into `source_doc.doc_type` — see the enum in the envelope reference. Required for UPSERT. |
+| ANTA scoring cycle | Optional | If the run is tied to an ANTA scoring cycle, pass the `scoring_cycle_id` UUID. Leave null for ad-hoc runs. |
 
 ## Output
 
-**Primary deliverable**: a JSON array (one object per mention) + a markdown summary table for human review. Each mention object:
+**Primary deliverable**: a JSON object containing the shared `source_doc` envelope + a `mentions` array + a summary narrative + a markdown summary table for human review. The envelope shape is mandatory and shared with every other extraction skill — see [../../references/source-doc-envelope.md](../../references/source-doc-envelope.md) for the full convention and field rules.
 
 ```json
 {
-  "operator_or_vendor": "VEON",
-  "cycle": "Q3 2026",
-  "source_doc": "VEON Q3 2026 earnings call transcript",
-  "source_url": "https://...",
-  "page_or_timestamp": "p. 14 / 37:22",
-  "speaker": "CEO Kaan Terzioğlu",
-  "quote": "We've rolled out our self-care GenAI agent in Pakistan, handling 60% of inbound tier-1 queries with a 35% deflection rate from human agents.",
-  "category": "deployment",
-  "subcategory": "customer ops / self-care",
-  "vendors_named": ["Microsoft Azure OpenAI"],
-  "quantitative": true,
-  "confidence": "high",
-  "notes": "Concrete production deployment with quantified KPIs; CEO-attributed, low ambiguity."
+  "source_doc": {
+    "filer_kind": "operator",
+    "filer_name": "VEON",
+    "filer_operator_id": "<uuid from operators table or null>",
+    "doc_type": "earnings_call_transcript",
+    "title": "VEON Q3 2026 earnings call transcript",
+    "source_url": "https://...",
+    "filing_date": "2026-10-30",
+    "reporting_period": "Q3 2026",
+    "scoring_cycle_id": null,
+    "reporting_currency": null,
+    "extracted_by": "ai-mentions-extractor v1"
+  },
+  "mentions": [
+    {
+      "id": 1,
+      "page_or_timestamp": "p. 14 / 37:22",
+      "speaker": "CEO Kaan Terzioğlu",
+      "quote": "We've rolled out our self-care GenAI agent in Pakistan, handling 60% of inbound tier-1 queries with a 35% deflection rate from human agents.",
+      "category": "deployment",
+      "subcategory": "customer ops / self-care",
+      "vendors_named": ["Microsoft Azure OpenAI"],
+      "quantitative": true,
+      "confidence": "high",
+      "notes": "Concrete production deployment with quantified KPIs; CEO-attributed, low ambiguity."
+    }
+  ],
+  "summary": "Eleven AI mentions, dominated by deployment and contribution. Headline: customer-care GenAI live in Pakistan with quantified deflection. Strategy talk has thinned vs Q2 — fewer aspirational claims, more in-production references."
 }
 ```
 
-Also emit a one-paragraph **summary narrative** for the editorial team: mention count, dominant category, anything genuinely new vs. prior cycle (cross-check ANTA Supabase if the prior cycle is available).
+The summary narrative (`summary`) is a 3–5 sentence editorial paragraph: mention count, dominant category, anything genuinely new vs. prior cycle (cross-check ANTA Supabase if the prior cycle is available).
 
 ## Classification Taxonomy
 
@@ -93,9 +110,10 @@ For each hit, expand to the **full sentence plus the sentence before and after**
 
 ### Step 1: Identify and verify the source
 
-1. Confirm the doc is the latest cycle (not a stale training-data version). Note the filing date.
-2. Identify the operator/vendor. Look it up in `anta-supabase` to get the canonical name and any prior-cycle context.
-3. Note the cycle (Q-Y or FY-Y).
+1. Confirm the doc is the latest cycle (not a stale training-data version). Capture the filing date.
+2. Identify the filer (`filer_kind` operator vs. vendor) and look it up in `anta-supabase` to get the canonical name and `filer_operator_id` (operator filers only).
+3. Determine `doc_type` from the 12-value enum (annual_report / 10-K / 20-F / quarterly_report / earnings_call_transcript / investor_day / press_release / investor_deck / analyst_day / cmd / regulatory_filing / other). Required — the loader UPSERTs on `(filer_name, reporting_period, doc_type)`.
+4. Capture `reporting_period` as the filer states it ("Q3 2026", "FY 2025"). If the run is bound to an ANTA scoring cycle, capture `scoring_cycle_id` from the request context. Populate the full `source_doc` envelope before extracting mentions.
 
 ### Step 2: Locate AI sections
 
@@ -140,33 +158,47 @@ Emit a 3–5 sentence summary covering: total mention count, category mix, the s
 
 ## Output Schema
 
-JSON array of objects, each conforming to:
-
 ```json
 {
-  "operator_or_vendor": "string (canonical name from ANTA universe)",
-  "cycle": "string, e.g. 'Q3 2026' or 'FY 2025'",
-  "source_doc": "string, human-readable",
-  "source_url": "string, optional",
-  "page_or_timestamp": "string, optional",
-  "speaker": "string, optional (transcripts only)",
-  "quote": "string, ≤500 chars, verbatim",
-  "category": "strategy | deployment | contribution | hype | risk",
-  "subcategory": "string, short free-form tag, e.g. 'customer ops', 'RAN', 'capex'",
-  "vendors_named": ["string", ...],
-  "quantitative": "boolean",
-  "confidence": "high | medium | low",
-  "notes": "string, one sentence"
+  "source_doc": {
+    "filer_kind": "operator | vendor",
+    "filer_name": "string — canonical name from ANTA universe",
+    "filer_operator_id": "uuid or null",
+    "doc_type": "annual_report | 10-K | 20-F | quarterly_report | earnings_call_transcript | investor_day | press_release | investor_deck | analyst_day | cmd | regulatory_filing | other",
+    "title": "string — human-readable doc title",
+    "source_url": "string or null",
+    "filing_date": "YYYY-MM-DD or null",
+    "reporting_period": "string e.g. 'Q3 2026'",
+    "scoring_cycle_id": "uuid or null",
+    "reporting_currency": null,
+    "extracted_by": "ai-mentions-extractor v1"
+  },
+  "mentions": [
+    {
+      "id": "integer",
+      "page_or_timestamp": "string or null",
+      "speaker": "string or null (transcripts only)",
+      "quote": "string ≤500 chars, verbatim",
+      "category": "strategy | deployment | contribution | hype | risk",
+      "subcategory": "string — short free-form tag, e.g. 'customer ops', 'RAN', 'capex'",
+      "vendors_named": ["string", ...],
+      "quantitative": "boolean",
+      "confidence": "high | medium | low",
+      "notes": "string — one sentence"
+    }
+  ],
+  "summary": "string — 3 to 5 sentences"
 }
 ```
 
-Plus a markdown rendering of the same data as a table for human review, and the 3–5 sentence summary narrative.
+Plus a markdown rendering of the mentions as a table for human review.
 
 ## Quality Checklist
 
 Before delivery:
-- [ ] Source document is the latest cycle (date verified)
-- [ ] Operator/vendor matched to ANTA canonical name
+- [ ] `source_doc` envelope is complete and valid (filer_kind set, filer_name canonical, doc_type set, reporting_period set)
+- [ ] `filer_operator_id` populated only when `filer_kind == 'operator'` AND a match exists; else null
+- [ ] Source document is the latest cycle (filing_date verified)
 - [ ] Every trigger keyword class was searched (not just "AI")
 - [ ] Every mention has verbatim quote + location reference
 - [ ] No `hype` mention is missing — be honest about boilerplate
@@ -179,6 +211,9 @@ Before delivery:
 
 ### references/taxonomy.md
 Worked examples for each category, including hard edge cases and "looks like X but is actually Y" patterns.
+
+### ../../references/source-doc-envelope.md
+The shared `source_doc` envelope convention used across all telecom-analyst extraction skills. Required reading before changing the envelope shape.
 
 ## Dependencies
 

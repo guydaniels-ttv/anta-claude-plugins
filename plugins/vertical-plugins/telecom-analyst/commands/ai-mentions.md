@@ -1,6 +1,6 @@
 ---
 description: Extract and classify every AI / GenAI / ML / agent mention from an operator or vendor filing, transcript, or investor doc
-argument-hint: "[path or URL to source doc] [operator or vendor name, optional] [cycle, e.g. Q3 2026, optional]"
+argument-hint: "[path or URL to source doc] [filer name, optional] [reporting period e.g. Q3 2026, optional]"
 ---
 
 # AI Mentions Extractor Command
@@ -13,8 +13,10 @@ Scan a single primary-source document and produce a structured table of every AI
 
 Parse the user's invocation for:
 - **Source doc** — path or URL to a filing PDF/HTML, earnings call transcript, investor day deck, or press release
-- **Operator or vendor name** — optional; infer from the doc if not given
-- **Cycle** — optional; infer from the doc if not given (e.g. "Q3 2026", "FY 2025")
+- **Filer name** — optional; infer from the doc if not given. Determines `filer_kind` (operator vs. vendor) and `filer_operator_id` via `anta-supabase` lookup.
+- **Reporting period** — optional; infer from the doc if not given (e.g. "Q3 2026", "FY 2025"). Goes into `source_doc.reporting_period`.
+- **Doc type** — optional; infer from the doc if not given. Required for the loader UPSERT.
+- **ANTA scoring cycle** — optional; pass `scoring_cycle_id` if the run is tied to an ANTA cycle.
 
 If the source doc is missing, ask:
 - "Which document should I scan? Paste a path or URL."
@@ -38,7 +40,7 @@ Provide three things:
    | # | Category | Subcategory | Quote (truncated) | Vendors | Quant? | Confidence |
    |---|---|---|---|---|---|---|
 
-2. **JSON array** matching the schema in the skill's `SKILL.md`, ready for Supabase ingest.
+2. **JSON object** matching the schema in the skill's `SKILL.md` — `source_doc` envelope + `mentions` array + `summary` — ready for Supabase ingest.
 
 3. **3–5 sentence narrative** for a TelecomTV editor: total mention count, category mix, the single most interesting mention this cycle, and any meaningful cycle-over-cycle delta.
 

@@ -30,19 +30,32 @@ Use when the user requests:
 |---|---|---|
 | Source document | Yes | Filing PDF/HTML, transcript, investor deck, press release. Path or URL. |
 | Filer (operator or vendor) | If not derivable | Cross-check ANTA universe. |
-| Cycle | If not derivable | E.g. Q3 2026, FY 2025. |
-| Reporting currency | Optional | Pulled from the doc if not given. Used for normalization. |
+| Reporting period | If not derivable | E.g. Q3 2026, FY 2025. Goes into `source_doc.reporting_period`. |
+| Doc type | If not derivable | Goes into `source_doc.doc_type` — see envelope reference. Required for UPSERT. |
+| ANTA scoring cycle | Optional | Pass `scoring_cycle_id` UUID if the run is tied to an ANTA cycle. |
+| Reporting currency | Required | The filer's reporting currency (ISO 4217). Goes into `source_doc.reporting_currency`. Used for normalisation; pulled from the doc if not given. |
 
 ## Output
 
-JSON object with a `disclosures` array, plus a markdown summary table, plus a 3–6 sentence narrative.
+JSON object with the shared `source_doc` envelope + `total_capex_disclosed` (optional) + `disclosures` array + `prior_cycle_comparison` array + summary narrative + a markdown summary table for human review. The envelope shape is shared with every other extraction skill — see [../../references/source-doc-envelope.md](../../references/source-doc-envelope.md) for the full convention.
+
+The `total_capex_disclosed` block lives once at the top of the output for cleanliness; the loader denormalises it onto every `ai_capex` row's `total_capex_*` columns at insert time.
 
 ```json
 {
-  "filer": "VEON",
-  "cycle": "Q3 2026",
-  "source_doc": "VEON Q3 2026 earnings call transcript",
-  "reporting_currency": "USD",
+  "source_doc": {
+    "filer_kind": "operator",
+    "filer_name": "VEON",
+    "filer_operator_id": "<uuid from operators table or null>",
+    "doc_type": "earnings_call_transcript",
+    "title": "VEON Q3 2026 earnings call transcript",
+    "source_url": "https://...",
+    "filing_date": "2026-10-30",
+    "reporting_period": "Q3 2026",
+    "scoring_cycle_id": null,
+    "reporting_currency": "USD",
+    "extracted_by": "ai-capex-tracker v1"
+  },
   "total_capex_disclosed": {
     "amount": 350000000,
     "currency": "USD",
@@ -144,9 +157,10 @@ For each match, expand to the **full sentence plus the sentence before and after
 
 ### Step 1: Identify and verify
 
-1. Confirm doc is the latest cycle (filing date verified).
-2. Identify the filer; cross-check the ANTA universe.
-3. Note the cycle and reporting currency.
+1. Confirm doc is the latest cycle (filing_date captured).
+2. Identify the filer; determine `filer_kind` (operator or vendor) and look up the canonical name + `filer_operator_id` (operator filers only) from `anta-supabase`.
+3. Determine `doc_type` from the 12-value enum (annual_report / 10-K / 20-F / quarterly_report / earnings_call_transcript / investor_day / press_release / investor_deck / analyst_day / cmd / regulatory_filing / other). Required for UPSERT.
+4. Capture `reporting_period`, `reporting_currency`, and `scoring_cycle_id` (if the run is bound to an ANTA cycle). Populate the full `source_doc` envelope before extracting disclosures.
 
 ### Step 2: Locate capex sections
 
@@ -206,16 +220,25 @@ The "gone quiet" case is editorially valuable — but defer the comprehensive re
 
 ```json
 {
-  "filer": "string",
-  "cycle": "string",
-  "source_doc": "string",
-  "reporting_currency": "string (ISO 4217)",
+  "source_doc": {
+    "filer_kind": "operator | vendor",
+    "filer_name": "string — canonical name from ANTA universe",
+    "filer_operator_id": "uuid or null",
+    "doc_type": "annual_report | 10-K | 20-F | quarterly_report | earnings_call_transcript | investor_day | press_release | investor_deck | analyst_day | cmd | regulatory_filing | other",
+    "title": "string — human-readable doc title",
+    "source_url": "string or null",
+    "filing_date": "YYYY-MM-DD or null",
+    "reporting_period": "string e.g. 'Q3 2026'",
+    "scoring_cycle_id": "uuid or null",
+    "reporting_currency": "string (ISO 4217)",
+    "extracted_by": "ai-capex-tracker v1"
+  },
   "total_capex_disclosed": {
     "amount": "number",
     "currency": "string",
     "horizon": "string",
     "horizon_type": "single-period | annual-rate | multi-year-cumulative | by-date",
-    "quote": "string"
+    "quote": "string ≤500 chars"
   },
   "disclosures": [
     {
@@ -256,8 +279,9 @@ The "gone quiet" case is editorially valuable — but defer the comprehensive re
 ## Quality Checklist
 
 Before delivery:
-- [ ] Source doc verified as latest cycle
-- [ ] Filer matched to ANTA canonical name
+- [ ] `source_doc` envelope is complete and valid (filer_kind set, filer_name canonical, doc_type set, reporting_period set, reporting_currency set)
+- [ ] `filer_operator_id` populated only when `filer_kind == 'operator'` AND a match exists; else null
+- [ ] Source doc verified as latest cycle (filing_date captured)
 - [ ] `total_capex_disclosed` populated only if explicitly in the doc (no external pulls)
 - [ ] Every AI-keyword + number proximity scanned, including in lists and footnotes
 - [ ] `amount_normalized` arithmetic correct for m/bn/cr/lakh suffixes
@@ -273,6 +297,9 @@ Before delivery:
 
 ### references/disclosure-status.md
 Worked examples for the four statuses, especially `committed` vs `announced` (the most common call), and how to handle hedged language ("up to," "in the range of," "around").
+
+### ../../references/source-doc-envelope.md
+The shared `source_doc` envelope convention used across all telecom-analyst extraction skills.
 
 ## Dependencies
 
