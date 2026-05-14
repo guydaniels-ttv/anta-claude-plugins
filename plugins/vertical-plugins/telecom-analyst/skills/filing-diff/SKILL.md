@@ -29,7 +29,7 @@ Use when the user requests:
 | Input | Required | Notes |
 |---|---|---|
 | Current-cycle source doc | Yes | Path or URL. The "new" side of the diff. |
-| Prior-cycle source doc | If not findable in `anta-supabase` / `filings-store` | The "old" side. The skill should attempt to auto-locate it from prior-cycle context in Supabase before asking. |
+| Prior-cycle source doc | If not findable in `anta-supabase` | The "old" side. Skill should auto-locate from prior-cycle context in Supabase before asking; if a fresh fetch is needed, use `WebFetch` / `Read`. |
 | Operator/vendor name | If not derivable from the docs | Cross-check against ANTA universe. |
 | Focus | Optional | `all` (default), `ai`, `risks`, `guidance`, `capex`, `strategy`, `vendors`. Narrows the comparison. |
 
@@ -110,7 +110,7 @@ If you can't decide between `high` and `medium`, pick `medium`. Don't inflate.
 1. Confirm the current-cycle doc is the latest (filing date verified).
 2. Find the prior-cycle counterpart:
    - First, check `anta-supabase` for a prior structured extraction (e.g. prior `ai_mentions` rows). If present, prefer it — you avoid re-extracting.
-   - Else, fetch the prior doc via `filings-store` MCP.
+   - Else, fetch the prior doc via `WebFetch` (URL) or `Read` (local path).
    - Else, ask the user.
 3. Verify both docs are the same type. If not, flag and proceed with caveat.
 
@@ -202,7 +202,7 @@ Worked examples for each status, especially `reworded` vs `materially-changed` (
 ## Dependencies
 
 **Required:**
-- `filings-store` MCP — to fetch source documents
+- `WebFetch` (URLs) / `Read` (local paths) — to fetch source documents
 - `anta-supabase` MCP — to find prior-cycle docs and to reuse prior structured extractions (e.g. `ai_mentions` rows) where available
 
 **Optional:**

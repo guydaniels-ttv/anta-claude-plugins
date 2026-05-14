@@ -212,6 +212,6 @@ The shared `source_doc` envelope convention used across all telecom-analyst extr
 - `ai-mentions-extractor`, `vendor-mentions`, `ai-capex-tracker`, `earnings-call-themes` skills — these provide the evidence base; run before synthesis if not already in Supabase
 
 **Optional:**
-- `filings-store` MCP — to fetch source documents if not already ingested
+- `WebFetch` (URLs) / `Read` (local paths) — to fetch source documents if not already ingested
 - `telecomtv-archive` MCP — to flag which angles TelecomTV has already covered (avoid duplicate commissioning recommendations)
 - `peer-set` skill output — useful context if the analysis needs peer-comparison framing

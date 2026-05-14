@@ -163,6 +163,6 @@ The shared `source_doc` envelope convention used across all telecom-analyst extr
 - `anta-supabase` MCP — for prior-cycle themes, capex disclosures, vendor mentions, and angle history
 
 **Optional:**
-- `filings-store` MCP — to fetch the filer's IR-calendar page for the anticipated date
+- `WebFetch` — to fetch the filer's IR-calendar page for the anticipated date
 - `catalyst-calendar` skill — to ensure the anticipated date matches the calendar
 - `telecomtv-archive` MCP — to pull prior published TelecomTV coverage of this filer

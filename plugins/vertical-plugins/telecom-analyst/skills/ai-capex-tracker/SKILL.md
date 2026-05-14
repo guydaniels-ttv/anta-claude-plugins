@@ -28,7 +28,7 @@ Use when the user requests:
 
 | Input | Required | Notes |
 |---|---|---|
-| Source document | Yes | Filing PDF/HTML, transcript, investor deck, press release. Path or URL. |
+| Source document | Yes | Filing PDF/HTML, transcript, investor deck, press release. Path or URL — URL → `WebFetch`; local path → `Read`. |
 | Filer (operator or vendor) | If not derivable | Cross-check ANTA universe. |
 | Reporting period | If not derivable | E.g. Q3 2026, FY 2025. Goes into `source_doc.reporting_period`. |
 | Doc type | If not derivable | Goes into `source_doc.doc_type` — see envelope reference. Required for UPSERT. |
@@ -304,7 +304,7 @@ The shared `source_doc` envelope convention used across all telecom-analyst extr
 ## Dependencies
 
 **Required:**
-- `filings-store` MCP — to fetch the source document
+- `WebFetch` (URLs) / `Read` (local paths) — to fetch source documents
 - `anta-supabase` MCP — to look up canonical filer name, vendor universe, and prior-cycle AI capex disclosures
 
 **Optional:**

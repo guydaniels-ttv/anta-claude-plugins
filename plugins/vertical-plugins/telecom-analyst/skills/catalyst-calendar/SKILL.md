@@ -151,5 +151,5 @@ Before delivery:
 - `anta-supabase` MCP — for the canonical operator + vendor universe and prior-cycle source_docs
 
 **Optional:**
-- `filings-store` MCP — to fetch IR-calendar pages for operators
+- `WebFetch` — to fetch IR-calendar pages for operators
 - `telecomtv-archive` MCP — to flag editorial coverage already commissioned for events on the calendar

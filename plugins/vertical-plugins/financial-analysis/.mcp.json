@@ -1,18 +1,8 @@
 {
-  "_comment": "ANTA / TelecomTV connector stubs. None wired yet — replace placeholder URLs with your stood-up MCP servers. Remove this _comment key before going live.",
+  "_comment": "ANTA / TelecomTV connector wiring. anta-supabase expects the official Supabase MCP to be configured at user scope (project: anta-index, id umwrpkzdaafkcpizfrcf) — credentials live in the user's shell, not in this repo. filings-store has been removed: skills use WebFetch (URLs) and Read (local paths) instead. telecomtv-archive remains a forward-reference stub: TelecomTV does not yet expose a crawlable archive, and skills gracefully degrade when this MCP is unavailable. Remove this _comment key before going live.",
   "mcpServers": {
-    "anta-supabase": {
-      "_comment": "MCP server in front of the ANTA Supabase: operators, vendors, telco universe, cycle_snapshots. The agent should check what's already known before re-reading a filing.",
-      "type": "http",
-      "url": "https://REPLACE-WITH-ANTA-SUPABASE-MCP/mcp"
-    },
-    "filings-store": {
-      "_comment": "MCP server over the filings folder (PDFs of annual reports, 10-Ks/20-Fs, quarterlies, earnings call transcripts). Could be a local FS MCP server or Egnyte/Drive.",
-      "type": "http",
-      "url": "https://REPLACE-WITH-FILINGS-STORE-MCP/mcp"
-    },
     "telecomtv-archive": {
-      "_comment": "Optional: TelecomTV editorial archive, so the agent can cite prior coverage alongside primary filings.",
+      "_comment": "FUTURE: TelecomTV editorial archive MCP. No standard MCP exists today and TelecomTV does not yet expose a crawlable archive. Skills referencing this (telecomtv-angle, editorial-leads, earnings-analysis, sector-overview-telco) handle absence cleanly — telecomtv-angle sets novelty='unknown', editorial-leads cross-checks only against Supabase telecomtv_angles rows, etc. Replace this entry with the real MCP URL once stood up.",
       "type": "http",
       "url": "https://REPLACE-WITH-TELECOMTV-ARCHIVE-MCP/mcp"
     }

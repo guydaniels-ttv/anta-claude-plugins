@@ -246,7 +246,7 @@ The full canonical KPI list — name, definition, unit, synonyms, ANTA conventio
 ## Dependencies
 
 **Required:**
-- `filings-store` MCP — to fetch the source document
+- `WebFetch` (URLs) / `Read` (local paths) — to fetch source documents
 - `anta-supabase` MCP — to look up canonical operator name, canonical segment list from prior `cycle_snapshots`, and to confirm `filer_side: operator`
 
 **Optional:**
