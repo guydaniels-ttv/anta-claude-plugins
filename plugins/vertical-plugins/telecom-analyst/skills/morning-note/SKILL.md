@@ -92,7 +92,7 @@ Query for rows created since the lookback boundary across:
 - `ai_mentions`, `ai_capex`, `vendor_mentions`, `earnings_call_themes`, `telecomtv_angles` — fresh extractions
 - `news_items` — anything tagged in the last 24 hours
 
-**B. Filings + filings-store MCP**
+**B. Filings via WebFetch**
 - Any operator IR pages with new releases not yet in `source_docs`
 - Any vendor press releases with telco resonance
 - Any regulatory bodies (Ofcom, FCC, BNetzA, ARCEP, AGCOM, ANRT, TRAI, etc.) with overnight rulings or consultations
@@ -177,6 +177,6 @@ Before delivery:
 - `anta-supabase` MCP — for the universe, recent extractions, news_items, and prior morning notes' commitments
 
 **Optional:**
-- `filings-store` MCP — to scan IR pages for overnight releases not yet ingested
+- `WebFetch` — to scan IR pages for overnight releases not yet ingested
 - `catalyst-calendar` skill output (loaded earlier in the session) — for today's + this week's events
 - `telecomtv-archive` MCP — to flag what TelecomTV has already covered, avoiding duplication

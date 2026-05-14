@@ -28,7 +28,7 @@ Use when the user requests:
 
 | Input | Required | Notes |
 |---|---|---|
-| Transcript | Yes | Path or URL to an earnings call transcript. Fetch via `filings-store` MCP if URL. |
+| Transcript | Yes | Path or URL to an earnings call transcript. URL → `WebFetch`; local path → `Read`. |
 | Filer name | If not derivable | Cross-check ANTA universe. |
 | Reporting period | If not derivable | E.g. "Q3 2026". Goes into `source_doc.reporting_period`. |
 | ANTA scoring cycle | Optional | Pass `scoring_cycle_id` if the run is tied to an ANTA cycle. |
@@ -255,7 +255,7 @@ The shared `source_doc` envelope convention used across all telecom-analyst extr
 ## Dependencies
 
 **Required:**
-- `filings-store` MCP — to fetch the transcript
+- `WebFetch` (URLs) / `Read` (local paths) — to fetch the transcript
 - `anta-supabase` MCP — to look up canonical filer name and prior-cycle themes for cross-comparison
 
 **Optional:**
