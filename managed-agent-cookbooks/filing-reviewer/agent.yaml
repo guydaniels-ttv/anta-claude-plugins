@@ -23,5 +23,4 @@ skills:
 
 callable_agents:
   - { manifest: ./subagents/transcript-reader.yaml }
-  - { manifest: ./subagents/model-updater.yaml }
   - { manifest: ./subagents/note-writer.yaml }   # only leaf with Write
